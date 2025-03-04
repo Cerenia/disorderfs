@@ -1,4 +1,4 @@
- /*
+  /*
  * Copyright 2015, 2016 Andrew Ayer <agwa@andrewayer.name>
  * Copyright 2016-2020 Chris Lamb <lamby@debian.org>
  *
@@ -42,7 +42,6 @@ extern "C" {
 #include <sys/syscall.h>
 #include <sys/file.h>
 #include <stddef.h>
-// XY: calling lstat
 #include <sys/stat.h>
 
 #define DISORDERFS_VERSION "0.5.12"
@@ -60,13 +59,23 @@ struct Disorderfs_config {
     int                        pad_blocks{1};
     int                        share_locks{0};
     int                        quiet{0};
-    // XY: Adding custom sorting option
     int                         sort_by_ctime{0};
 };
 Disorderfs_config                config;
 
 //XY: global for simplicity
 std::ofstream debug_log;
+
+//XY: overload timespec operator
+bool operator<= (const timespec first, const timespec second){
+    if(first.tv_sec < second.tv_sec){
+        return true;
+    } else if (first.tv_sec == second.tv_sec)
+    {
+        return first.tv_nsec <= second.tv_nsec;
+    }
+    return false; // first_seconds > second_seconds
+};
 
 void perror_and_die (const char* s)
 {
@@ -235,6 +244,7 @@ int fuse_opt_proc (void* data, const char* arg, int key, struct fuse_args* outar
         std::clog << "    --multi-user=yes|no    allow multiple users to access overlay (requires root; default: no)" << std::endl;
         std::clog << "    --shuffle-dirents=yes|no  randomly shuffle directory entries? (default: no)" << std::endl;
         std::clog << "    --reverse-dirents=yes|no  reverse dirent order? (default: yes)" << std::endl;
+        std::clog << "    --sort-by-ctime=yes|no  sort by ctime (returned by lstat call) instead of alphabetically (default: no). Will show the youngest file first if --reverse-dirents=yes." << std::endl;
         std::clog << "    --sort-dirents=yes|no  sort directory entries deterministically instead (default: no)" << std::endl;
         std::clog << "    --pad-blocks=N         add N to st_blocks (default: 1)" << std::endl;
         std::clog << "    --share-locks=yes|no   share locks with underlying filesystem (BUGGY; default: no)" << std::endl;
@@ -462,27 +472,36 @@ int        main (int argc, char** argv)
         std::string abspath;
         abspath = root;
         abspath.append("/");
+        // define comparator
+        auto compare_ctime = [abspath](std::pair<std::__cxx11::basic_string<char>, long unsigned int> a, std::pair<std::__cxx11::basic_string<char>, long unsigned int> b){
+            // get both abspaths
+            std::string abspath_a = abspath;
+            std::string abspath_b = abspath;
+            abspath_a.append(a.first);
+            abspath_b.append(b.first);
+            // call lstat on both
+            struct stat buffer_a;
+            struct stat buffer_b;
+            int status_a = lstat(abspath_a.c_str(), &buffer_a);
+            int status_b = lstat(abspath_b.c_str(), &buffer_b);
+            // currently ignoring status but graceful error handling would be preferred.
+            bool result = buffer_a.st_ctim <= buffer_b.st_ctim;
+            if (result) {
+                debug_log << a.first << " <= " << b.first << std::endl;
+            } else {
+                debug_log << b.first << " <= " << a.first << std::endl;
+            }
+            return result;
+        };
         if(config.sort_by_ctime){
-            // Xy: TODO: add comparator function
             if (config.sort_dirents) {
-                debug_log << "appending first file to rootpath:" << std::endl;
-                debug_log << abspath.append(dirents->begin()->first) << std::endl;
-                int status = lstat(abspath.c_str(), &buffer);
-                // Convert to double
-                // In order to keep precision, we remove any digits that are more than 6hrs in the past
-                // 6hrs  = 21600 seconds 
-                //double day_precision_seconds = (unsigned)buffer.st_ctim.tv_sec % 21600; 
-                long double time = (long unsigned)buffer.st_ctim.tv_sec  + (long double)buffer.st_ctim.tv_nsec / 1000000000;
-                debug_log <<  std::numeric_limits<long double>::digits10 << std::endl;
-                debug_log << (long unsigned)buffer.st_ctim.tv_sec << std::endl;
-                debug_log << (long double)buffer.st_ctim.tv_nsec << std::endl;
-                debug_log << time << std::endl;
-                std::sort(dirents->begin(), dirents->end());
+                // add custom comparator
+                std::sort(dirents->begin(), dirents->end(), compare_ctime);
             }
             if (config.reverse_dirents) {
                 std::reverse(dirents->begin(), dirents->end());
             }
-        } else { //XY: Sort lexicographically
+        } else { // sort lexicographically
             if (config.sort_dirents) {
                 std::sort(dirents->begin(), dirents->end());
             }

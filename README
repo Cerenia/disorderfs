@@ -1,0 +1,16 @@
+disorderfs - FUSE filesystem that introduces non-determinism
+
+disorderfs is an overlay FUSE filesystem that introduces non-determinism
+into filesystem metadata.  For example, it can randomize the order
+in which directory entries are read.  This is useful for detecting
+non-determinism in the build process.
+
+See the man page for details.
+
+After releasing, please also release a signed tarball:
+
+    $ VERSION=FIXME
+    $ git archive --format=tar --prefix=disorderfs-${VERSION}/ ${VERSION} | bzip2 -9 > disorderfs-${VERSION}.tar.bz2
+    $ gpg --detach-sig --armor --output=disorderfs-${VERSION}.tar.bz2.asc < disorderfs-${VERSION}.tar.bz2
+
+And commit them to our LFS repository at https://salsa.debian.org/reproducible-builds/reproducible-lfs

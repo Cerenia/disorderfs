@@ -1,0 +1,11 @@
+#!/bin/sh
+
+. ./common
+ 
+Mount --sort-dirents=yes --reverse-dirents=no
+Expect abc
+Unmount
+
+Mount --sort-dirents=yes --reverse-dirents=yes
+Expect cba
+Unmount

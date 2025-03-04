@@ -1,0 +1,46 @@
+v0.5.11 (2020-01-19)
+  * Improve tests.
+  * Add RPM spec file
+  * Makefile: allow to prepend flags in CXXFLAGS.
+
+v0.5.2 (2017-08-21)
+  * Add -q, --quiet options to avoid printing to stdout.
+
+v0.5.1 (2016-09-13)
+  * Add --sort-dirents=yes|no option for forcing deterministic.
+  * Support absolute paths by transforming ROOTDIR on startup.
+    * Update man page.
+  * Print the behaviour on startup to stdout.
+  * Add testsuite.
+
+v0.4.3 (2016-06-09)
+  * Fix bug that caused files to be created with the wrong permissions.
+  * Minor code cleanup.
+
+v0.4.2 (2015-12-22)
+  * Fix memory corruption when processing command line arguments, which
+    could cause command line options to be ignored.
+
+v0.4.1 (2015-10-17)
+  * Disable lock sharing/propagation by default, due to bugs
+    (re-enable with --propagate-locks=yes option).
+
+v0.4.0 (2015-09-23)
+  * Make mmap with MAP_SHARED work.
+  * Propagate locks to underlying filesystem.
+  * Implement flush, fsync, and fsyncdir operations.
+  * Support more efficient I/O.
+
+v0.3.0 (2015-09-22)
+  * Implement multi-user mode.
+  * Add options --shuffle-dirents, --reverse-dirents, and --pad-blocks.
+  * Bug fix: don't follow symlinks in xattr syscalls.
+  * Clarify BUGS in man page.
+
+v0.2.0 (2015-08-26)
+  * Implement xattrs.
+  * Require rootdir arg to be absolute path, and document in man page.
+  * Clarify BUGS in man page.
+
+v0.1.0 (2015-08-21)
+  * Initial release.

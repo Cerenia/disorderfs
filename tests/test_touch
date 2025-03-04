@@ -1,0 +1,36 @@
+#!/bin/sh
+# Test for https://bugs.debian.org/cgi-bin/bugreport.cgi?bug=911281
+
+. ./common
+
+Mount
+
+EXPECTED="12345678"
+FILENAME="target/a"
+
+touch ${FILENAME}
+touch -d @${EXPECTED} ${FILENAME}
+RESULT="$(stat --format=%X-%Y ${FILENAME})"
+if [ "${RESULT}" != "${EXPECTED}-${EXPECTED}" ]
+then
+	Fail "test1: Got=${RESULT} Expected=${EXPECTED}"
+fi
+
+# This is what tar xf does for extracted files via futimens(2)
+touch ${FILENAME}
+touch -m -d @${EXPECTED} ${FILENAME}
+RESULT="$(stat --format=%Y ${FILENAME})"
+if [ "${RESULT}" != "${EXPECTED}" ]
+then
+	Fail "test2: Got=${RESULT} Expected=${EXPECTED}"
+fi
+
+touch ${FILENAME}
+touch -a -d @${EXPECTED} ${FILENAME}
+RESULT="$(stat --format=%X ${FILENAME})"
+if [ "${RESULT}" != "${EXPECTED}" ]
+then
+	Fail "test3: Got=${RESULT} Expected=${EXPECTED}"
+fi
+
+Unmount

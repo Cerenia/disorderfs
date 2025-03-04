@@ -1,0 +1,87 @@
+#!/bin/sh
+
+. ./common
+
+TEMPDIR="$(mktemp -d -t inodes.XXXXXXXXXX)"
+
+trap "Unmount 2>/dev/null; rm -rf ${TEMPDIR}" EXIT
+
+Setup () {
+	cat >${TEMPDIR}/inodes.cpp <<EOF
+#include <dirent.h>
+#include <fcntl.h>
+#include <stdio.h>
+#include <unistd.h>
+#include <stdlib.h>
+#include <string.h>
+#include <sys/stat.h>
+#include <sys/syscall.h>
+
+#include <map>
+#include <iostream>
+
+struct linux_dirent {
+	unsigned long 	d_ino;
+	off_t		d_off;
+	unsigned short	d_reclen;
+	char		d_name[];
+};
+
+#define BUF_SIZE 1024
+
+void perror_and_die (const char* s)
+{
+	std::perror(s);
+	std::abort();
+}
+
+int
+main(int argc, char *argv[])
+{
+	int				fd, nread, ret = EXIT_SUCCESS;
+	char				buf[BUF_SIZE];
+	struct stat			st;
+	const std::string		dirname = argc > 1 ? argv[1] : ".";
+	struct linux_dirent		*d;
+	std::map<ino_t, std::string>	inodes;
+
+	if ((fd = open(dirname.c_str(), O_RDONLY | O_DIRECTORY)) == -1)
+		perror_and_die("open");
+
+	while ((nread = syscall(SYS_getdents, fd, buf, BUF_SIZE)) > 0) {
+		for (int pos = 0; pos < nread; pos += d->d_reclen) {
+			d = (struct linux_dirent *) (buf + pos);
+
+			std::string filename = dirname + "/" + std::string(d->d_name);
+			if (stat(filename.c_str(), &st) == -1)
+				perror_and_die("stat");
+
+			if (d->d_ino != st.st_ino) {
+				std::cerr << filename << ": inode from getdents does not match stat: "
+					<< d->d_ino << " != " << st.st_ino << std::endl;
+				ret = EXIT_FAILURE;
+			}
+
+			if (inodes.find(d->d_ino) == inodes.end()) {
+				inodes[d->d_ino] = filename;
+			} else {
+				std::cerr << filename << ": duplicate inode: " << d->d_ino
+					<< " used by " << inodes[d->d_ino] << std::endl;
+				ret = EXIT_FAILURE;
+			}
+		}
+	}
+
+	if (nread == -1)
+		perror_and_die("open");
+
+	exit(ret);
+}
+EOF
+	g++ -Wall -o${TEMPDIR}/inodes ${TEMPDIR}/inodes.cpp || Fail "Could not compile testcase"
+}
+
+Setup
+Mount
+${TEMPDIR}/inodes target || Fail "inodes"
+Unmount

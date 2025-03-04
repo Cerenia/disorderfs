@@ -1,0 +1,33 @@
+#!/bin/sh
+
+. ./common
+
+LOOPS=3000
+
+Start () {
+	START="$(date +%s.%N)"
+}
+
+Stop () {
+	SUFFIX="${1}"
+	DURATION="$(echo "$(date +%s.%N) - ${START}" | bc)"
+	printf "Took %.3fs %s\n" "${DURATION}" "${SUFFIX}"
+}
+
+Start
+for X in $(seq "${LOOPS}")
+do
+	find fixtures -ls >/dev/null
+	du -s fixtures >/dev/null
+done
+Stop "without disorderfs"
+
+Mount
+Start
+for X in $(seq "${LOOPS}")
+do
+	find target -ls >/dev/null
+	du -s target >/dev/null
+done
+Stop "with disorderfs"
+Unmount

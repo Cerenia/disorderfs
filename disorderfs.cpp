@@ -63,10 +63,7 @@ struct Disorderfs_config {
 };
 Disorderfs_config                config;
 
-//XY: global for simplicity
-std::ofstream debug_log;
-
-//XY: overload timespec operator
+// Overload timespec operator
 bool operator<= (const timespec first, const timespec second){
     if(first.tv_sec < second.tv_sec){
         return true;
@@ -216,7 +213,6 @@ const struct fuse_opt disorderfs_fuse_opts[] = {
     DISORDERFS_OPT("--pad-blocks=%i", pad_blocks, 0),
     DISORDERFS_OPT("--share-locks=no", share_locks, false),
     DISORDERFS_OPT("--share-locks=yes", share_locks, true),
-    // XY: Also adding the ctime option here
     DISORDERFS_OPT("--sort-by-ctime=no", sort_by_ctime, false),
     DISORDERFS_OPT("--sort-by-ctime=yes", sort_by_ctime, true),
     FUSE_OPT_KEY("-h", KEY_HELP),
@@ -270,8 +266,6 @@ int        main (int argc, char** argv)
     signal(SIGPIPE, SIG_IGN);
     umask(0);
 
-    // XY: Initialize debug log
-    debug_log.open("/home/chrissy/Code/disorderfs/disorderfs-master/log.txt", debug_log.trunc);
     
     /*
      * Parse command line options
@@ -292,8 +286,6 @@ int        main (int argc, char** argv)
         std::perror(bare_arguments[0].c_str());
         return 1;
     }
-
-    std::cout << "XY: what is root: " <<root <<std::endl;
 
     // Add some of our own hard-coded FUSE options:
     fuse_opt_add_arg(&fargs, "-o");
@@ -464,9 +456,7 @@ int        main (int argc, char** argv)
         if (errno != 0) {
             return -errno;
         }
-        // Make root into a filepath
-        debug_log << "XY: Right before ctime logic" << std::endl;
-        // XY: Define custom comparator
+        // Defining custom comparator
         struct stat buffer;
         // Assuming posix
         std::string abspath;
@@ -486,11 +476,6 @@ int        main (int argc, char** argv)
             int status_b = lstat(abspath_b.c_str(), &buffer_b);
             // currently ignoring status but graceful error handling would be preferred.
             bool result = buffer_a.st_ctim <= buffer_b.st_ctim;
-            if (result) {
-                debug_log << a.first << " <= " << b.first << std::endl;
-            } else {
-                debug_log << b.first << " <= " << a.first << std::endl;
-            }
             return result;
         };
         if(config.sort_by_ctime){

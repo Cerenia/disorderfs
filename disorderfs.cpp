@@ -471,8 +471,11 @@ int        main (int argc, char** argv)
                 // Convert to double
                 // In order to keep precision, we remove any digits that are more than 6hrs in the past
                 // 6hrs  = 21600 seconds 
-                double day_precision_seconds = (int)buffer.st_ctim.tv_sec % 21600; 
-                double time = (double)day_precision_seconds + (double)buffer.st_ctim.tv_nsec / 1000000000;
+                //double day_precision_seconds = (unsigned)buffer.st_ctim.tv_sec % 21600; 
+                long double time = (long unsigned)buffer.st_ctim.tv_sec  + (long double)buffer.st_ctim.tv_nsec / 1000000000;
+                debug_log <<  std::numeric_limits<long double>::digits10 << std::endl;
+                debug_log << (long unsigned)buffer.st_ctim.tv_sec << std::endl;
+                debug_log << (long double)buffer.st_ctim.tv_nsec << std::endl;
                 debug_log << time << std::endl;
                 std::sort(dirents->begin(), dirents->end());
             }

@@ -1,4 +1,4 @@
-  /*
+/*
  * Copyright 2015, 2016 Andrew Ayer <agwa@andrewayer.name>
  * Copyright 2016-2020 Chris Lamb <lamby@debian.org>
  *
@@ -59,7 +59,7 @@ struct Disorderfs_config {
     int                        pad_blocks{1};
     int                        share_locks{0};
     int                        quiet{0};
-    int                         sort_by_ctime{0};
+    int                        sort_by_ctime{0};
 };
 Disorderfs_config                config;
 
@@ -240,8 +240,8 @@ int fuse_opt_proc (void* data, const char* arg, int key, struct fuse_args* outar
         std::clog << "    --multi-user=yes|no    allow multiple users to access overlay (requires root; default: no)" << std::endl;
         std::clog << "    --shuffle-dirents=yes|no  randomly shuffle directory entries? (default: no)" << std::endl;
         std::clog << "    --reverse-dirents=yes|no  reverse dirent order? (default: yes)" << std::endl;
-        std::clog << "    --sort-by-ctime=yes|no  sort by ctime (returned by lstat call) instead of alphabetically (default: no). Will show the youngest file first if --reverse-dirents=yes." << std::endl;
-        std::clog << "    --sort-dirents=yes|no  sort directory entries deterministically instead (default: no)" << std::endl;
+        std::clog << "    --sort-dirents=yes|no  sort directory entries instead (default: no)" << std::endl;
+        std::clog << "    --sort-by-ctime=yes|no  sort directory entries by ctime as returned by lstat syscall instead of alphabetically (default: no). No effect if --sort-dirents=no (default). Will show the youngest file first if --reverse-dirents=yes." << std::endl;
         std::clog << "    --pad-blocks=N         add N to st_blocks (default: 1)" << std::endl;
         std::clog << "    --share-locks=yes|no   share locks with underlying filesystem (BUGGY; default: no)" << std::endl;
         std::clog << std::endl;
@@ -300,11 +300,12 @@ int        main (int argc, char** argv)
         if (config.shuffle_dirents) {
             std::cout << "disorderfs: shuffling directory entries" << std::endl;
         }
+        if (config.sort_dirents) {
+            std::string sort_target = (config.sort_by_ctime)? "by ctime" : "alphabetically";
+            std::cout << "disorderfs: sorting directory entries " << sort_target << std::endl;
+        }
         if (config.reverse_dirents) {
             std::cout << "disorderfs: reversing directory entries" << std::endl;
-        }
-        if (config.sort_dirents) {
-            std::cout << "disorderfs: sorting directory entries" << std::endl;
         }
     }
     /*
@@ -427,7 +428,7 @@ int        main (int argc, char** argv)
         Guard g;
         return wrap(lsetxattr((root + path).c_str(), name, value, size, flags));
     };
-    disorderfs_fuse_operations.getxattr = [] (const char* path, const char* name, char* value , size_t size) -> int {
+    disorderfs_fuse_operations.getxattr = [] (const char* path, const char* name, char* value, size_t size) -> int {
         Guard g;
         ssize_t res = lgetxattr((root + path).c_str(), name, value, size);
         return res >= 0 ? res : -errno;
@@ -474,7 +475,7 @@ int        main (int argc, char** argv)
             struct stat buffer_b;
             int status_a = lstat(abspath_a.c_str(), &buffer_a);
             int status_b = lstat(abspath_b.c_str(), &buffer_b);
-            // currently ignoring status but graceful error handling would be preferred.
+            // currently ignoring status, graceful error handling would be preferred
             bool result = buffer_a.st_ctim <= buffer_b.st_ctim;
             return result;
         };
@@ -486,8 +487,8 @@ int        main (int argc, char** argv)
             if (config.reverse_dirents) {
                 std::reverse(dirents->begin(), dirents->end());
             }
-        } else { // sort lexicographically
-            if (config.sort_dirents) {
+        } else { 
+            if (config.sort_dirents) { // sort lexicographically
                 std::sort(dirents->begin(), dirents->end());
             }
             if (config.reverse_dirents) {

@@ -468,7 +468,6 @@ int        main (int argc, char** argv)
             // get both abspaths
             std::string abspath_a = abspath;
             std::string abspath_b = abspath;
-            std::cout << "abspath:\n " << abspath << std::endl;
             abspath_a.append(a.first);
             abspath_b.append(b.first);
             // call lstat on both
@@ -478,9 +477,6 @@ int        main (int argc, char** argv)
             int status_b = lstat(abspath_b.c_str(), &buffer_b);
             // currently ignoring status, graceful error handling would be preferred
             bool result = buffer_a.st_ctim < buffer_b.st_ctim;
-            std::cout << a.first << " <= " << b.first << " ? " << result << std::endl;
-            std::cout << "status " << a.first << ": " << status_a << std::endl;
-            std::cout << "status " << b.first << ": " << status_b << std::endl;
             return result;
         };
         if (config.sort_dirents) {

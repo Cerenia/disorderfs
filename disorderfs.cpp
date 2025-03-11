@@ -476,7 +476,7 @@ int        main (int argc, char** argv)
             int status_a = lstat(abspath_a.c_str(), &buffer_a);
             int status_b = lstat(abspath_b.c_str(), &buffer_b);
             // currently ignoring status, graceful error handling would be preferred
-            bool result = buffer_a.st_ctim <= buffer_b.st_ctim;
+            bool result = buffer_a.st_ctim < buffer_b.st_ctim;
             std::cout << a.first << " <= " << b.first << " ? " << result << std::endl;
             std::cout << "status " << a.first << ": " << status_a << std::endl;
             std::cout << "status " << b.first << ": " << status_b << std::endl;

@@ -468,6 +468,7 @@ int        main (int argc, char** argv)
             // get both abspaths
             std::string abspath_a = abspath;
             std::string abspath_b = abspath;
+            std::cout << "abspath:\n " << abspath << std::endl;
             abspath_a.append(a.first);
             abspath_b.append(b.first);
             // call lstat on both

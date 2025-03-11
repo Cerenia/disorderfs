@@ -64,12 +64,12 @@ struct Disorderfs_config {
 Disorderfs_config                config;
 
 // Overload timespec operator
-bool operator<= (const timespec first, const timespec second){
+bool operator< (const timespec first, const timespec second){
     if(first.tv_sec < second.tv_sec){
         return true;
     } else if (first.tv_sec == second.tv_sec)
     {
-        return first.tv_nsec <= second.tv_nsec;
+        return first.tv_nsec < second.tv_nsec;
     }
     return false; // first_seconds > second_seconds
 };
@@ -461,13 +461,14 @@ int        main (int argc, char** argv)
         struct stat buffer;
         // Assuming posix
         std::string abspath;
-        abspath = root;
+        abspath = root + path;
         abspath.append("/");
         // define comparator
         auto compare_ctime = [abspath](std::pair<std::__cxx11::basic_string<char>, long unsigned int> a, std::pair<std::__cxx11::basic_string<char>, long unsigned int> b){
             // get both abspaths
             std::string abspath_a = abspath;
             std::string abspath_b = abspath;
+            std::cout << "abspath:\n " << abspath << std::endl;
             abspath_a.append(a.first);
             abspath_b.append(b.first);
             // call lstat on both
@@ -476,7 +477,10 @@ int        main (int argc, char** argv)
             int status_a = lstat(abspath_a.c_str(), &buffer_a);
             int status_b = lstat(abspath_b.c_str(), &buffer_b);
             // currently ignoring status, graceful error handling would be preferred
-            bool result = buffer_a.st_ctim <= buffer_b.st_ctim;
+            bool result = buffer_a.st_ctim < buffer_b.st_ctim;
+            std::cout << a.first << " <= " << b.first << " ? " << result << std::endl;
+            std::cout << "status " << a.first << ": " << status_a << std::endl;
+            std::cout << "status " << b.first << ": " << status_b << std::endl;
             return result;
         };
         if (config.sort_dirents) {

@@ -42,6 +42,7 @@ extern "C" {
 #include <sys/syscall.h>
 #include <sys/file.h>
 #include <stddef.h>
+#include <sys/stat.h>
 
 #define DISORDERFS_VERSION "0.5.12"
 
@@ -58,8 +59,20 @@ struct Disorderfs_config {
     int                        pad_blocks{1};
     int                        share_locks{0};
     int                        quiet{0};
+    int                        sort_by_ctime{0};
 };
 Disorderfs_config                config;
+
+// Overload timespec operator
+bool operator<= (const timespec first, const timespec second){
+    if(first.tv_sec < second.tv_sec){
+        return true;
+    } else if (first.tv_sec == second.tv_sec)
+    {
+        return first.tv_nsec <= second.tv_nsec;
+    }
+    return false; // first_seconds > second_seconds
+};
 
 void perror_and_die (const char* s)
 {
@@ -200,6 +213,8 @@ const struct fuse_opt disorderfs_fuse_opts[] = {
     DISORDERFS_OPT("--pad-blocks=%i", pad_blocks, 0),
     DISORDERFS_OPT("--share-locks=no", share_locks, false),
     DISORDERFS_OPT("--share-locks=yes", share_locks, true),
+    DISORDERFS_OPT("--sort-by-ctime=no", sort_by_ctime, false),
+    DISORDERFS_OPT("--sort-by-ctime=yes", sort_by_ctime, true),
     FUSE_OPT_KEY("-h", KEY_HELP),
     FUSE_OPT_KEY("--help", KEY_HELP),
     FUSE_OPT_KEY("-V", KEY_VERSION),
@@ -225,7 +240,8 @@ int fuse_opt_proc (void* data, const char* arg, int key, struct fuse_args* outar
         std::clog << "    --multi-user=yes|no    allow multiple users to access overlay (requires root; default: no)" << std::endl;
         std::clog << "    --shuffle-dirents=yes|no  randomly shuffle directory entries? (default: no)" << std::endl;
         std::clog << "    --reverse-dirents=yes|no  reverse dirent order? (default: yes)" << std::endl;
-        std::clog << "    --sort-dirents=yes|no  sort directory entries deterministically instead (default: no)" << std::endl;
+        std::clog << "    --sort-dirents=yes|no  sort directory entries instead (default: no)" << std::endl;
+        std::clog << "    --sort-by-ctime=yes|no  sort directory entries by ctime as returned by lstat syscall instead of alphabetically (default: no). No effect if --sort-dirents=no (default). Will show the youngest file first if --reverse-dirents=yes." << std::endl;
         std::clog << "    --pad-blocks=N         add N to st_blocks (default: 1)" << std::endl;
         std::clog << "    --share-locks=yes|no   share locks with underlying filesystem (BUGGY; default: no)" << std::endl;
         std::clog << std::endl;
@@ -250,6 +266,7 @@ int        main (int argc, char** argv)
     signal(SIGPIPE, SIG_IGN);
     umask(0);
 
+    
     /*
      * Parse command line options
      */
@@ -283,14 +300,14 @@ int        main (int argc, char** argv)
         if (config.shuffle_dirents) {
             std::cout << "disorderfs: shuffling directory entries" << std::endl;
         }
+        if (config.sort_dirents) {
+            std::string sort_target = (config.sort_by_ctime)? "by ctime" : "alphabetically";
+            std::cout << "disorderfs: sorting directory entries " << sort_target << std::endl;
+        }
         if (config.reverse_dirents) {
             std::cout << "disorderfs: reversing directory entries" << std::endl;
         }
-        if (config.sort_dirents) {
-            std::cout << "disorderfs: sorting directory entries" << std::endl;
-        }
     }
-
     /*
      * Initialize disorderfs_fuse_operations
      */
@@ -428,7 +445,6 @@ int        main (int argc, char** argv)
     disorderfs_fuse_operations.opendir = [] (const char* path, struct fuse_file_info* info) -> int {
         Guard g;
         std::unique_ptr<Dirents> dirents{new Dirents};
-
         DIR* d = opendir((root + path).c_str());
         if (!d) {
             return -errno;
@@ -441,12 +457,40 @@ int        main (int argc, char** argv)
         if (errno != 0) {
             return -errno;
         }
+        // Defining custom comparator
+        struct stat buffer;
+        // Assuming posix
+        std::string abspath;
+        abspath = root;
+        abspath.append("/");
+        // define comparator
+        auto compare_ctime = [abspath](std::pair<std::__cxx11::basic_string<char>, long unsigned int> a, std::pair<std::__cxx11::basic_string<char>, long unsigned int> b){
+            // get both abspaths
+            std::string abspath_a = abspath;
+            std::string abspath_b = abspath;
+            abspath_a.append(a.first);
+            abspath_b.append(b.first);
+            // call lstat on both
+            struct stat buffer_a;
+            struct stat buffer_b;
+            int status_a = lstat(abspath_a.c_str(), &buffer_a);
+            int status_b = lstat(abspath_b.c_str(), &buffer_b);
+            // currently ignoring status, graceful error handling would be preferred
+            bool result = buffer_a.st_ctim <= buffer_b.st_ctim;
+            return result;
+        };
         if (config.sort_dirents) {
-            std::sort(dirents->begin(), dirents->end());
+            if (config.sort_by_ctime) {
+                // add custom comparator
+                std::sort(dirents->begin(), dirents->end(), compare_ctime);
+            } else {
+                // sort lexicographically
+                std::sort(dirents->begin(), dirents->end());
+            }
         }
         if (config.reverse_dirents) {
-            std::reverse(dirents->begin(), dirents->end());
-        }
+                std::reverse(dirents->begin(), dirents->end());
+            }
         closedir(d);
         if (errno != 0) {
             return -errno;
@@ -561,6 +605,5 @@ int        main (int argc, char** argv)
     disorderfs_fuse_operations.fallocate = [] (const char* path, int mode, off_t off, off_t len, struct fuse_file_info* info) -> int {
         return wrap(fallocate(info->fh, mode, off, len));
     };
-
     return fuse_main(fargs.argc, fargs.argv, &disorderfs_fuse_operations, nullptr);
 }

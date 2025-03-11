@@ -461,7 +461,7 @@ int        main (int argc, char** argv)
         struct stat buffer;
         // Assuming posix
         std::string abspath;
-        abspath = root;
+        abspath = root + path;
         abspath.append("/");
         // define comparator
         auto compare_ctime = [abspath](std::pair<std::__cxx11::basic_string<char>, long unsigned int> a, std::pair<std::__cxx11::basic_string<char>, long unsigned int> b){

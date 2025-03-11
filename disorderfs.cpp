@@ -64,12 +64,12 @@ struct Disorderfs_config {
 Disorderfs_config                config;
 
 // Overload timespec operator
-bool operator<= (const timespec first, const timespec second){
+bool operator< (const timespec first, const timespec second){
     if(first.tv_sec < second.tv_sec){
         return true;
     } else if (first.tv_sec == second.tv_sec)
     {
-        return first.tv_nsec <= second.tv_nsec;
+        return first.tv_nsec < second.tv_nsec;
     }
     return false; // first_seconds > second_seconds
 };

@@ -74,6 +74,36 @@ bool operator< (const timespec first, const timespec second){
     return false; // first_seconds > second_seconds
 };
 
+
+typedef std::pair<timespec, std::pair<std::__cxx11::basic_string<char>, long unsigned int>> Ctime_Dirents_pair;
+
+// We found that std::sort was corrupting the data with the naive implementation of calling
+// lstat() during each comparison execution (probably because the value was not stable for the same element between comparisons)
+// this creates a stable sequence of timespecs for sort 
+// we trade memory for code legibility given the c++11 restriction
+/*
+ * @param dirents The data in the form of a vector of file/dir-name and inode pairs
+ * @param abspath The absolute path to the root of the directory the data was read from (assuming posix)
+*/
+std::vector<Ctime_Dirents_pair> create_ctime_dirents_list(std::unique_ptr<Dirents> dirents, std::string abspath){
+    // include a trailing '/' if necessary, assuming posix
+    if(abspath.back() != '/'){
+        abspath.push_back('/');
+    }
+    // Iterate through the dirents list and call lstat() exactly once on each entry
+    std::vector<Ctime_Dirents_pair> result;
+    for(Dirents::iterator i = dirents->begin(); i <= dirents->end(); i++){
+        std::string el_abspath = abspath;
+        el_abspath.append(i->first);
+        struct stat buffer;
+        int status = lstat(el_abspath.c_str(), &buffer);
+        timespec ctime = buffer.st_ctim;
+        Ctime_Dirents_pair new_element = std::pair(ctime, std::pair(i->first, i->second));
+        result.push_back(new_element);
+    }
+    return result;
+}
+
 void perror_and_die (const char* s)
 {
     std::perror(s);

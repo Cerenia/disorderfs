@@ -121,9 +121,10 @@ bool compare_ctime_dirents(Ctime_Dirent_pair a, Ctime_Dirent_pair b){
 
 // PRE: dirents.size() == sorted_interim.size()
 void overwrite_dirents(Dirents& dirents, std::vector<Ctime_Dirent_pair>& sorted_interim){
-    
+    for(int i = 0; i < sorted_interim.size(); i++){
+        *(dirents.begin() + i) = (sorted_interim.begin() + i)->second;
+    }
 };
-
 
 // The libc versions of seteuid, etc. set the credentials for all threads.
 // We need to set credentials for a single thread only, so call the syscalls directly.

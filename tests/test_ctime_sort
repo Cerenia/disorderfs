@@ -1,0 +1,22 @@
+#!/bin/sh
+
+. ./common
+ 
+# Recreate the timed files
+rm -r ./timed
+mkdir timed
+cd timed || exit
+touch old
+sleep 1
+touch mid
+sleep 1
+touch new
+cd .. || exit
+
+Mount -s timed/ --sort-dirents=yes --reverse-dirents=no --sort-by-ctime=yes
+Expect oldmidnew
+Unmount
+
+Mount -s timed/ --sort-dirents=yes --reverse-dirents=yes --sort-by-ctime=yes
+Expect newmidold
+Unmount

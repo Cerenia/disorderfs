@@ -1,9 +1,18 @@
 trap "Unmount 2>/dev/null" EXIT
 
 Mount () {
+	while getopts "s" opt; do
+		case $opt in
+			s) src="$OPTARG";;
+		esac
+	done
+	if [ -z "$src" ];
+		then src=fixtures/;
+		else src="${src}/";
+	fi
 	Unmount
 	mkdir -p target
-	../disorderfs -q "${@}" fixtures/ target/
+	../disorderfs -q "${@}" "$src" target/
 }
 
 Unmount () {

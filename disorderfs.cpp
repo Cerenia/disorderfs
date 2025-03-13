@@ -95,7 +95,7 @@ bool operator< (const timespec first, const timespec second){
  * @param dirents The data in the form of a vector of file/dir-name and inode pairs
  * @param abspath The absolute path to the root of the directory the data was read from (assuming posix)
 */
-std::vector<Ctime_Dirent_pair> create_ctime_dirents_list(std::unique_ptr<Dirents> dirents, std::string abspath){
+std::vector<Ctime_Dirent_pair> create_ctime_dirents_list(std::unique_ptr<Dirents>& dirents, std::string abspath){
     // include a trailing '/' if necessary, assuming posix
     if(abspath.back() != '/'){
         abspath.push_back('/');
@@ -120,9 +120,9 @@ bool compare_ctime_dirents(Ctime_Dirent_pair a, Ctime_Dirent_pair b){
 };
 
 // PRE: dirents.size() == sorted_interim.size()
-void overwrite_dirents(Dirents& dirents, std::vector<Ctime_Dirent_pair>& sorted_interim){
+void overwrite_dirents(std::unique_ptr<Dirents>& dirents, std::vector<Ctime_Dirent_pair>& sorted_interim){
     for(int i = 0; i < sorted_interim.size(); i++){
-        *(dirents.begin() + i) = (sorted_interim.begin() + i)->second;
+        *(dirents->begin() + i) = (sorted_interim.begin() + i)->second;
     }
 };
 
@@ -501,7 +501,9 @@ int        main (int argc, char** argv)
         if (config.sort_dirents) {
             if (config.sort_by_ctime) {
                 // add custom comparator
-                std::sort(dirents->begin(), dirents->end(), compare_ctime);
+                auto tmp = create_ctime_dirents_list(dirents, root);
+                std::sort(tmp.begin(), tmp.end(), compare_ctime_dirents);
+                overwrite_dirents(dirents, tmp);
             } else {
                 // sort lexicographically
                 std::sort(dirents->begin(), dirents->end());

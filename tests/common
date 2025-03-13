@@ -1,17 +1,24 @@
 trap "Unmount 2>/dev/null" EXIT
 
 Mount () {
-	while getopts "s" opt; do
+	while getopts "m" opt; do
 		case $opt in
-			s) src="$OPTARG";;
+			s) src=timed/;;
 		esac
 	done
 	if [ -z "$src" ];
 		then src=fixtures/;
-		else src="${src}/";
 	fi
 	Unmount
 	mkdir -p target
+	# remove -m from params before passing it on
+	#for arg do
+  	#	shift
+  	#	[ "$arg" = "-m" ] && continue
+  	#	set -- "$@" "$arg"
+	#done
+	echo "Parameter list:"
+	echo "${@}"
 	../disorderfs -q "${@}" "$src" target/
 }
 

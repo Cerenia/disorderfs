@@ -63,6 +63,19 @@ struct Disorderfs_config {
 };
 Disorderfs_config                config;
 
+void perror_and_die (const char* s)
+{
+    std::perror(s);
+    std::abort();
+}
+
+int wrap (int retval) {
+    return retval == -1 ? -errno : 0;
+}
+using Dirents = std::vector<std::pair<std::string, ino_t>>;
+
+typedef std::pair<timespec, std::pair<std::__cxx11::basic_string<char>, long unsigned int>> Ctime_Dirent_pair;
+
 // Overload timespec operator
 bool operator< (const timespec first, const timespec second){
     if(first.tv_sec < second.tv_sec){
@@ -74,9 +87,6 @@ bool operator< (const timespec first, const timespec second){
     return false; // first_seconds > second_seconds
 };
 
-
-typedef std::pair<timespec, std::pair<std::__cxx11::basic_string<char>, long unsigned int>> Ctime_Dirents_pair;
-
 // We found that std::sort was corrupting the data with the naive implementation of calling
 // lstat() during each comparison execution (probably because the value was not stable for the same element between comparisons)
 // this creates a stable sequence of timespecs for sort 
@@ -85,35 +95,35 @@ typedef std::pair<timespec, std::pair<std::__cxx11::basic_string<char>, long uns
  * @param dirents The data in the form of a vector of file/dir-name and inode pairs
  * @param abspath The absolute path to the root of the directory the data was read from (assuming posix)
 */
-std::vector<Ctime_Dirents_pair> create_ctime_dirents_list(std::unique_ptr<Dirents> dirents, std::string abspath){
+std::vector<Ctime_Dirent_pair> create_ctime_dirents_list(std::unique_ptr<Dirents> dirents, std::string abspath){
     // include a trailing '/' if necessary, assuming posix
     if(abspath.back() != '/'){
         abspath.push_back('/');
     }
     // Iterate through the dirents list and call lstat() exactly once on each entry
-    std::vector<Ctime_Dirents_pair> result;
-    for(Dirents::iterator i = dirents->begin(); i <= dirents->end(); i++){
+    std::vector<Ctime_Dirent_pair> result;
+    for(auto i = dirents->begin(); i <= dirents->end(); i++){
         std::string el_abspath = abspath;
         el_abspath.append(i->first);
         struct stat buffer;
         int status = lstat(el_abspath.c_str(), &buffer);
+        //TODO: do something meaningful with status
         timespec ctime = buffer.st_ctim;
-        Ctime_Dirents_pair new_element = std::pair(ctime, std::pair(i->first, i->second));
+        Ctime_Dirent_pair new_element = std::pair(ctime, std::pair(i->first, i->second));
         result.push_back(new_element);
     }
     return result;
-}
+};
 
-void perror_and_die (const char* s)
-{
-    std::perror(s);
-    std::abort();
-}
+bool compare_ctime_dirents(Ctime_Dirent_pair a, Ctime_Dirent_pair b){
+    return a.first < b.first;
+};
 
-int wrap (int retval) {
-    return retval == -1 ? -errno : 0;
-}
-using Dirents = std::vector<std::pair<std::string, ino_t>>;
+// PRE: dirents.size() == sorted_interim.size()
+void overwrite_dirents(Dirents& dirents, std::vector<Ctime_Dirent_pair>& sorted_interim){
+    
+};
+
 
 // The libc versions of seteuid, etc. set the credentials for all threads.
 // We need to set credentials for a single thread only, so call the syscalls directly.
@@ -487,28 +497,6 @@ int        main (int argc, char** argv)
         if (errno != 0) {
             return -errno;
         }
-        // Defining custom comparator
-        struct stat buffer;
-        // Assuming posix
-        std::string abspath;
-        abspath = root + path;
-        abspath.append("/");
-        // define comparator
-        auto compare_ctime = [abspath](std::pair<std::__cxx11::basic_string<char>, long unsigned int> a, std::pair<std::__cxx11::basic_string<char>, long unsigned int> b){
-            // get both abspaths
-            std::string abspath_a = abspath;
-            std::string abspath_b = abspath;
-            abspath_a.append(a.first);
-            abspath_b.append(b.first);
-            // call lstat on both
-            struct stat buffer_a;
-            struct stat buffer_b;
-            int status_a = lstat(abspath_a.c_str(), &buffer_a);
-            int status_b = lstat(abspath_b.c_str(), &buffer_b);
-            // currently ignoring status, graceful error handling would be preferred
-            bool result = buffer_a.st_ctim < buffer_b.st_ctim;
-            return result;
-        };
         if (config.sort_dirents) {
             if (config.sort_by_ctime) {
                 // add custom comparator

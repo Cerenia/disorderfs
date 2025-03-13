@@ -74,7 +74,7 @@ int wrap (int retval) {
 }
 using Dirents = std::vector<std::pair<std::string, ino_t>>;
 
-typedef std::pair<timespec, std::pair<std::__cxx11::basic_string<char>, long unsigned int>> Ctime_Dirent_pair;
+typedef std::pair<timespec, std::pair<std::string, ino_t>> Ctime_Dirent_pair;
 
 // Overload timespec operator
 bool operator< (const timespec first, const timespec second){
@@ -109,7 +109,7 @@ std::vector<Ctime_Dirent_pair> create_ctime_dirents_list(std::unique_ptr<Dirents
         int status = lstat(el_abspath.c_str(), &buffer);
         //TODO: do something meaningful with status
         timespec ctime = buffer.st_ctim;
-        Ctime_Dirent_pair new_element = std::pair(ctime, std::pair(i->first, i->second));
+        Ctime_Dirent_pair new_element = {ctime, {i->first, i->second}};
         result.push_back(new_element);
     }
     return result;

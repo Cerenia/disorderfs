@@ -486,6 +486,7 @@ int        main (int argc, char** argv)
     disorderfs_fuse_operations.opendir = [] (const char* path, struct fuse_file_info* info) -> int {
         Guard g;
         std::unique_ptr<Dirents> dirents{new Dirents};
+        std::cout << (root + path).c_str() << std::endl;
         DIR* d = opendir((root + path).c_str());
         if (!d) {
             return -errno;
@@ -500,6 +501,7 @@ int        main (int argc, char** argv)
         }
         if (config.sort_dirents) {
             if (config.sort_by_ctime) {
+                std::cout << "disorderfs: Sorting by ctime logic start" << std::endl;
                 // add custom comparator
                 auto tmp = create_ctime_dirents_list(dirents, root);
                 std::sort(tmp.begin(), tmp.end(), compare_ctime_dirents);
@@ -510,6 +512,7 @@ int        main (int argc, char** argv)
                 // Calling reverse on the overwritten dirents list lead to the following error when executing the tests:
                 // find target -type f -printf %f
                 // find: ‘target’: Input/output error
+                std::cout << "disorderfs: Sorting by ctime logic end" << std::endl;
             } else {
                 // sort lexicographically
                 std::sort(dirents->begin(), dirents->end());
@@ -527,6 +530,7 @@ int        main (int argc, char** argv)
         }
 
         set_fuse_data<Dirents*>(info, dirents.release());
+        std::cout << "disorderfs: No errors." << std::endl;
         return 0;
     };
     disorderfs_fuse_operations.readdir = [] (const char* path, void* buf, fuse_fill_dir_t filler, off_t offset, struct fuse_file_info* info) {

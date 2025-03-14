@@ -103,7 +103,7 @@ std::vector<Ctime_Dirent_pair> create_ctime_dirents_list(std::unique_ptr<Dirents
     std::cout << "ABSPATH: " << abspath << std::endl;
     // Iterate through the dirents list and call lstat() exactly once on each entry
     std::vector<Ctime_Dirent_pair> result;
-    for(auto i = dirents->begin(); i <= dirents->end(); i++){
+    for(auto i = dirents->begin(); i < dirents->end(); i++){
         std::string el_abspath = abspath;
         el_abspath.append(i->first);
         struct stat buffer;

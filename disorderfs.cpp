@@ -111,10 +111,9 @@ std::vector<Ctime_Dirent_pair> create_ctime_dirents_list(std::unique_ptr<Dirents
         //TODO: do something meaningful with status
         std::cout << "Stat of " << i->first << ": " << status << std::endl;
         timespec ctime = buffer.st_ctim;
-        Ctime_Dirent_pair new_element = {ctime, {i->first, i->second}};
+        Ctime_Dirent_pair new_element = {ctime, {*i}};
         result.push_back(new_element);
     }
-    abspath.push_back('XXX');
     return result;
 };
 
@@ -508,14 +507,12 @@ int        main (int argc, char** argv)
         if (config.sort_dirents) {
             if (config.sort_by_ctime) {
                 std::cout << "disorderfs: Sorting by ctime logic start" << std::endl;
-                // add custom comparator
-                //auto tmp = create_ctime_dirents_list(dirents, (root + path).c_str());
-                auto tmp = create_ctime_dirents_list(dirents, root);
+                auto tmp = create_ctime_dirents_list(dirents, (root + path).c_str());
                 std::sort(tmp.begin(), tmp.end(), compare_ctime_dirents);
                 if(config.reverse_dirents){
                     std::reverse(tmp.begin(), tmp.end());
                 }
-                //overwrite_dirents(dirents, tmp);
+                overwrite_dirents(dirents, tmp);
                 // Calling reverse on the overwritten dirents list lead to the following error when executing the tests:
                 // find target -type f -printf %f
                 // find: ‘target’: Input/output error

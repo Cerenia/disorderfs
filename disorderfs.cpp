@@ -488,11 +488,8 @@ int        main (int argc, char** argv)
     disorderfs_fuse_operations.opendir = [] (const char* path, struct fuse_file_info* info) -> int {
         Guard g;
         std::unique_ptr<Dirents> dirents{new Dirents};
-        std::cout << (root + path).c_str() << std::endl;
         DIR* d = opendir((root + path).c_str());
-        std::cout << "value of d: " << d << std::endl;
         if (!d) {
-            std::cout << "ERROR: !d" << std::endl;
             return -errno;
         }
         struct dirent*        dirent_p;
@@ -501,34 +498,21 @@ int        main (int argc, char** argv)
             dirents->emplace_back(std::make_pair(dirent_p->d_name, dirent_p->d_ino));
         }
         if (errno != 0) {
-            std::cout << "ERROR: after while loop" << std::endl;
             return -errno;
         }
         if (config.sort_dirents) {
             if (config.sort_by_ctime) {
-                std::cout << "disorderfs: Sorting by ctime logic start" << std::endl;
                 auto tmp = create_ctime_dirents_list(dirents, (root + path).c_str());
                 std::sort(tmp.begin(), tmp.end(), compare_ctime_dirents);
-                if(config.reverse_dirents){
-                    std::reverse(tmp.begin(), tmp.end());
-                }
                 overwrite_dirents(dirents, tmp);
-                // Calling reverse on the overwritten dirents list lead to the following error when executing the tests:
-                // find target -type f -printf %f
-                // find: ‘target’: Input/output error
-                std::cout << "disorderfs: Sorting by ctime logic end" << std::endl;
             } else {
                 // sort lexicographically
                 std::sort(dirents->begin(), dirents->end());
-                if (config.reverse_dirents) {
-                    std::reverse(dirents->begin(), dirents->end());
-                }
             }
-        } else if (config.reverse_dirents) {
-            // Redundancies because we avoid calling std::reverse on the overwritten vector
-            std::reverse(dirents->begin(), dirents->end());
         }
-        std::cout << "value of d: " << d << std::endl;
+        if (config.reverse_dirents) {
+                std::reverse(dirents->begin(), dirents->end());
+            }
         closedir(d);
         if (errno != 0) {
             std::cout << "ERROR: closedir" << std::endl;

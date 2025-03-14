@@ -2,7 +2,7 @@
 
 . ./common
  
-echo "Clearing fixtures and creating timed files..."
+echo "  sort_ctime: clearing fixtures and creating timed files..."
 cd fixtures || exit
 rm a b c
 touch old
@@ -21,7 +21,7 @@ Mount --sort-dirents=yes --reverse-dirents=yes --sort-by-ctime=yes
 Expect newmidold
 Unmount
 
-echo "Recreating a,b,c testfiles..."
+echo "  sort_ctime: recreating a,b,c testfiles..."
 cd fixtures || exit
 rm old mid new
 touch a b c

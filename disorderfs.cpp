@@ -503,15 +503,24 @@ int        main (int argc, char** argv)
                 // add custom comparator
                 auto tmp = create_ctime_dirents_list(dirents, root);
                 std::sort(tmp.begin(), tmp.end(), compare_ctime_dirents);
+                if(config.reverse_dirents){
+                    std::reverse(tmp.begin(), tmp.end());
+                }
                 overwrite_dirents(dirents, tmp);
+                // Calling reverse on the overwritten dirents list lead to the following error when executing the tests:
+                // find target -type f -printf %f
+                // find: ‘target’: Input/output error
             } else {
                 // sort lexicographically
                 std::sort(dirents->begin(), dirents->end());
+                if (config.reverse_dirents) {
+                    std::reverse(dirents->begin(), dirents->end());
+                }
             }
+        } else if (config.reverse_dirents) {
+            // Redundancies because we avoid calling std::reverse on the overwritten vector
+            std::reverse(dirents->begin(), dirents->end());
         }
-        if (config.reverse_dirents) {
-                std::reverse(dirents->begin(), dirents->end());
-            }
         closedir(d);
         if (errno != 0) {
             return -errno;

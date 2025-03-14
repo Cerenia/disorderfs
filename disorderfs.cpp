@@ -111,7 +111,7 @@ std::vector<Ctime_Dirent_pair> create_ctime_dirents_list(std::unique_ptr<Dirents
         //TODO: do something meaningful with status
         std::cout << "Stat of " << i->first << ": " << status << std::endl;
         timespec ctime = buffer.st_ctim;
-        Ctime_Dirent_pair new_element = {ctime, {*i}};
+        Ctime_Dirent_pair new_element = {ctime, *i};
         result.push_back(new_element);
     }
     return result;

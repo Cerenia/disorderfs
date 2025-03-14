@@ -100,7 +100,6 @@ std::vector<Ctime_Dirent_pair> create_ctime_dirents_list(std::unique_ptr<Dirents
     if(abspath.back() != '/'){
         abspath.push_back('/');
     }
-    std::cout << "ABSPATH: " << abspath << std::endl;
     // Iterate through the dirents list and call lstat() exactly once on each entry
     std::vector<Ctime_Dirent_pair> result;
     for(auto i = dirents->begin(); i < dirents->end(); i++){
@@ -109,7 +108,6 @@ std::vector<Ctime_Dirent_pair> create_ctime_dirents_list(std::unique_ptr<Dirents
         struct stat buffer;
         int status = lstat(el_abspath.c_str(), &buffer);
         //TODO: do something meaningful with status
-        std::cout << "Stat of " << i->first << ": " << status << std::endl;
         timespec ctime = buffer.st_ctim;
         Ctime_Dirent_pair new_element = {ctime, *i};
         result.push_back(new_element);
@@ -515,12 +513,9 @@ int        main (int argc, char** argv)
             }
         closedir(d);
         if (errno != 0) {
-            std::cout << "ERROR: closedir" << std::endl;
             return -errno;
         }
-
         set_fuse_data<Dirents*>(info, dirents.release());
-        std::cout << "disorderfs: No errors." << std::endl;
         return 0;
     };
     disorderfs_fuse_operations.readdir = [] (const char* path, void* buf, fuse_fill_dir_t filler, off_t offset, struct fuse_file_info* info) {

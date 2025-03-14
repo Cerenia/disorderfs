@@ -100,6 +100,7 @@ std::vector<Ctime_Dirent_pair> create_ctime_dirents_list(std::unique_ptr<Dirents
     if(abspath.back() != '/'){
         abspath.push_back('/');
     }
+    std::cout << "ABSPATH: " << abspath << std::endl;
     // Iterate through the dirents list and call lstat() exactly once on each entry
     std::vector<Ctime_Dirent_pair> result;
     for(auto i = dirents->begin(); i <= dirents->end(); i++){
@@ -108,10 +109,12 @@ std::vector<Ctime_Dirent_pair> create_ctime_dirents_list(std::unique_ptr<Dirents
         struct stat buffer;
         int status = lstat(el_abspath.c_str(), &buffer);
         //TODO: do something meaningful with status
+        std::cout << "Stat of " << i->first << ": " << status << std::endl;
         timespec ctime = buffer.st_ctim;
         Ctime_Dirent_pair new_element = {ctime, {i->first, i->second}};
         result.push_back(new_element);
     }
+    abspath.push_back('XXX');
     return result;
 };
 
@@ -488,7 +491,9 @@ int        main (int argc, char** argv)
         std::unique_ptr<Dirents> dirents{new Dirents};
         std::cout << (root + path).c_str() << std::endl;
         DIR* d = opendir((root + path).c_str());
+        std::cout << "value of d: " << d << std::endl;
         if (!d) {
+            std::cout << "ERROR: !d" << std::endl;
             return -errno;
         }
         struct dirent*        dirent_p;
@@ -497,18 +502,20 @@ int        main (int argc, char** argv)
             dirents->emplace_back(std::make_pair(dirent_p->d_name, dirent_p->d_ino));
         }
         if (errno != 0) {
+            std::cout << "ERROR: after while loop" << std::endl;
             return -errno;
         }
         if (config.sort_dirents) {
             if (config.sort_by_ctime) {
                 std::cout << "disorderfs: Sorting by ctime logic start" << std::endl;
                 // add custom comparator
+                //auto tmp = create_ctime_dirents_list(dirents, (root + path).c_str());
                 auto tmp = create_ctime_dirents_list(dirents, root);
                 std::sort(tmp.begin(), tmp.end(), compare_ctime_dirents);
                 if(config.reverse_dirents){
                     std::reverse(tmp.begin(), tmp.end());
                 }
-                overwrite_dirents(dirents, tmp);
+                //overwrite_dirents(dirents, tmp);
                 // Calling reverse on the overwritten dirents list lead to the following error when executing the tests:
                 // find target -type f -printf %f
                 // find: ‘target’: Input/output error
@@ -524,8 +531,10 @@ int        main (int argc, char** argv)
             // Redundancies because we avoid calling std::reverse on the overwritten vector
             std::reverse(dirents->begin(), dirents->end());
         }
+        std::cout << "value of d: " << d << std::endl;
         closedir(d);
         if (errno != 0) {
+            std::cout << "ERROR: closedir" << std::endl;
             return -errno;
         }
 

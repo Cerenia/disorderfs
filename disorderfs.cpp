@@ -87,6 +87,9 @@ bool operator< (const timespec first, const timespec second){
     return false; // first_seconds > second_seconds
 };
 
+// At least provide a known value if lstat happens to fail to avoid data corruption
+const timespec INVALID = {0,0};
+
 // We found that std::sort was corrupting the data with the naive implementation of calling
 // lstat() during each comparison execution (probably because the value was not stable for the same element between comparisons)
 // this creates a stable sequence of timespecs for sort 
@@ -107,8 +110,14 @@ std::vector<Ctime_Dirent_pair> create_ctime_dirents_list(std::unique_ptr<Dirents
         el_abspath.append(i->first);
         struct stat buffer;
         int status = lstat(el_abspath.c_str(), &buffer);
-        //TODO: do something meaningful with status
-        timespec ctime = buffer.st_ctim;
+        timespec ctime;
+        if (status != 0){
+            std::cerr << "WARNING: lstat returned " << status << " for " << el_abspath << std::endl;
+            std::cerr << "WARNING: replacing ctime with {0s, 0ns}" << std::endl;
+            ctime = INVALID;
+        } else {
+            ctime = buffer.st_ctim;
+        }
         Ctime_Dirent_pair new_element = {ctime, *i};
         result.push_back(new_element);
     }

@@ -112,7 +112,7 @@ std::vector<Ctime_Dirent_pair> create_ctime_dirents_list(std::unique_ptr<Dirents
         int status = lstat(el_abspath.c_str(), &buffer);
         timespec ctime;
         if (status != 0){
-            std::cerr << "WARNING: lstat returned " << status << " for " << el_abspath << std::endl;
+            std::cerr << "WARNING: lstat returned " << status << " for \n" << el_abspath << std::endl;
             std::cerr << "WARNING: replacing ctime with {0s, 0ns}" << std::endl;
             ctime = INVALID;
         } else {
@@ -518,8 +518,8 @@ int        main (int argc, char** argv)
             }
         }
         if (config.reverse_dirents) {
-                std::reverse(dirents->begin(), dirents->end());
-            }
+            std::reverse(dirents->begin(), dirents->end());
+        }
         closedir(d);
         if (errno != 0) {
             return -errno;
